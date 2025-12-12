@@ -18,12 +18,6 @@ Bypass prompts (for CI/non-interactive use):
 ./install --force
 ```
 
-Or build a release binary:
-
-```sh
-cargo build --release
-```
-
 ## Notes
 
 - If you still have `concat-zsh` sourced as a Zsh function named `concat`, it will shadow the Rust binary. Use `command concat ...` or remove the function from your shell config.
@@ -80,3 +74,25 @@ By default, hidden files are skipped. You can either:
 ## `clean` subcommand
 
 Deletes previously generated `_concat-*` files from the given directories (default: `.`). Searches recursively by default; use `-n` to disable recursion. Supports `-x/-g/-I/-e/-H` similarly to the main command.
+
+## Contributing
+
+Build locally:
+
+```sh
+cargo build
+```
+
+Build an optimized binary:
+
+```sh
+cargo build --release
+```
+
+Run checks:
+
+```sh
+cargo fmt
+cargo clippy --all-targets --all-features -- -D warnings
+cargo test
+```
