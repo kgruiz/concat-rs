@@ -36,6 +36,11 @@ pub fn collect_candidate_files(
                 );
             }
 
+            let allow_hidden_by_include_globs = config
+                .include_globs
+                .iter()
+                .any(|pattern| pattern_implies_hidden(pattern));
+
             let root_is_hidden = is_hidden_name(item.file_name());
             let mut walker = WalkDir::new(item);
 
@@ -50,7 +55,7 @@ pub fn collect_candidate_files(
                     Err(_) => continue,
                 };
 
-                if !config.include_hidden && entry.depth() > 0 {
+                if !config.include_hidden && !allow_hidden_by_include_globs && entry.depth() > 0 {
                     let name_is_hidden = is_hidden_name(Some(entry.file_name()));
                     let should_prune = name_is_hidden && (root_is_hidden || entry.depth() == 1);
 
@@ -91,4 +96,8 @@ pub fn collect_candidate_files(
 fn is_hidden_name(name: Option<&std::ffi::OsStr>) -> bool {
     name.and_then(|name| name.to_str())
         .is_some_and(|name| name.starts_with('.'))
+}
+
+fn pattern_implies_hidden(pattern: &str) -> bool {
+    pattern.starts_with('.') || pattern.contains("/.") || pattern.contains("\\.")
 }
