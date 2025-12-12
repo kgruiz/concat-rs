@@ -23,6 +23,7 @@ pub struct RunConfig {
     pub verbose: bool,
     pub debug: bool,
     pub show_dir_list: bool,
+    pub show_metadata: bool,
     pub include_binary: bool,
     pub clean_concat_files: bool,
     pub inputs: Vec<String>,
@@ -66,6 +67,7 @@ impl RunConfig {
             verbose: cli.run.verbose,
             debug: cli.run.debug,
             show_dir_list: !cli.run.no_dir_list,
+            show_metadata: !cli.run.no_metadata,
             include_binary: cli.run.include_binary,
             clean_concat_files: !cli.run.no_clean_concat,
             inputs,
@@ -92,6 +94,7 @@ impl RunConfig {
         eprintln!("Include Hidden: {}", self.include_hidden);
         eprintln!("Show Tree: {}", self.show_tree);
         eprintln!("Show Dir List: {}", self.show_dir_list);
+        eprintln!("Show Metadata: {}", self.show_metadata);
         eprintln!("Purge Pycache (in CWD): {}", self.purge_pycache);
         eprintln!("Include Binary: {}", self.include_binary);
         eprintln!("Clean _concat-* in CWD: {}", self.clean_concat_files);

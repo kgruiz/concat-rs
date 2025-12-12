@@ -65,6 +65,69 @@ fn text_mode_uses_txt_extension() -> anyhow::Result<()> {
 }
 
 #[test]
+fn metadata_xml_is_included_by_default() -> anyhow::Result<()> {
+    let dir = non_hidden_tempdir()?;
+    let src = dir.path().join("src");
+    fs::create_dir_all(&src)?;
+    fs::write(src.join("a.txt"), "a\nb\n")?;
+
+    let expected = dir.path().join("_concat-src.xml");
+
+    let mut cmd = cargo_bin_cmd!("concat");
+    cmd.current_dir(dir.path()).arg("src").assert().success();
+
+    let out = fs::read_to_string(&expected)?;
+
+    assert!(out.contains("<fileMetadata count=\"1\">"));
+    assert!(out.contains("<lines>2</lines>"));
+    assert!(out.contains("<characters>4</characters>"));
+    Ok(())
+}
+
+#[test]
+fn metadata_text_output_is_included_by_default() -> anyhow::Result<()> {
+    let dir = non_hidden_tempdir()?;
+    let src = dir.path().join("src");
+    fs::create_dir_all(&src)?;
+    fs::write(src.join("a.txt"), "hello")?;
+
+    let expected = dir.path().join("_concat-src.txt");
+
+    let mut cmd = cargo_bin_cmd!("concat");
+    cmd.current_dir(dir.path())
+        .args(["-t", "src"])
+        .assert()
+        .success();
+
+    let out = fs::read_to_string(&expected)?;
+
+    assert!(out.contains("# File Metadata (1 files)"));
+    assert!(out.contains("(lines: 1, chars: 5)"));
+    Ok(())
+}
+
+#[test]
+fn metadata_can_be_disabled() -> anyhow::Result<()> {
+    let dir = non_hidden_tempdir()?;
+    let src = dir.path().join("src");
+    fs::create_dir_all(&src)?;
+    fs::write(src.join("a.txt"), "hello\n")?;
+
+    let expected = dir.path().join("_concat-src.xml");
+
+    let mut cmd = cargo_bin_cmd!("concat");
+    cmd.current_dir(dir.path())
+        .args(["--no-metadata", "src"])
+        .assert()
+        .success();
+
+    let out = fs::read_to_string(&expected)?;
+
+    assert!(!out.contains("<fileMetadata"));
+    Ok(())
+}
+
+#[test]
 fn ext_filter_sets_output_name() -> anyhow::Result<()> {
     let dir = non_hidden_tempdir()?;
     let src = dir.path().join("src");

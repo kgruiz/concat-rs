@@ -36,6 +36,7 @@ If no inputs are provided, `concat` defaults to `.`.
 - Default output format is **XML**.
 - Use `-t, --text` for plain text output.
 - Output filenames default to `_concat-*` unless `-o, --output` is provided.
+- A metadata header (line and character counts per file) is included by default; disable with `-M, --no-metadata`.
 
 ### Output filename logic (when `--output` is not set)
 
@@ -60,6 +61,7 @@ If no inputs are provided, `concat` defaults to `.`.
 - `-P, --no-purge-pycache`: do not remove `__pycache__` and `.pyc` in the current directory
 - `-C, --no-clean-concat`: do not delete existing `_concat-*` files in the current directory before writing
 - `-b, --include-binary`: include non-text files (encoded as base64)
+- `-M, --no-metadata`: omit the per-file metadata header (line/character counts)
 - `-l, --no-dir-list`: omit the matched directory list section (XML only)
 - `-v, --verbose`: verbose logging
 - `-d, --debug`: extra debug logging

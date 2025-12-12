@@ -62,6 +62,9 @@ pub struct RunArgs {
     #[arg(short = 'b', long = "include-binary")]
     pub include_binary: bool,
 
+    #[arg(short = 'M', long = "no-metadata")]
+    pub no_metadata: bool,
+
     #[arg(short = 'C', long = "no-clean-concat")]
     pub no_clean_concat: bool,
 

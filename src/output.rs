@@ -9,15 +9,42 @@ use crate::config::{OutputFormat, RunConfig};
 use crate::sort;
 use crate::text_detect;
 
+#[derive(Debug, Clone)]
+struct FileMetadata {
+    path: PathBuf,
+    lines: usize,
+    characters: usize,
+    is_binary: bool,
+    read_error: Option<String>,
+}
+
 pub fn write_output(
     config: &RunConfig,
     output_path: &Path,
     matched_files: &[PathBuf],
     tree: Option<&str>,
 ) -> Result<()> {
+    let metadata = if config.show_metadata {
+        Some(collect_file_metadata(matched_files))
+    } else {
+        None
+    };
+
     match config.format {
-        OutputFormat::Xml => write_xml_output(config, output_path, matched_files, tree),
-        OutputFormat::Text => write_text_output(config, output_path, matched_files, tree),
+        OutputFormat::Xml => write_xml_output(
+            config,
+            output_path,
+            matched_files,
+            tree,
+            metadata.as_deref(),
+        ),
+        OutputFormat::Text => write_text_output(
+            config,
+            output_path,
+            matched_files,
+            tree,
+            metadata.as_deref(),
+        ),
     }
 }
 
@@ -26,6 +53,7 @@ fn write_xml_output(
     output_path: &Path,
     matched_files: &[PathBuf],
     tree: Option<&str>,
+    metadata: Option<&[FileMetadata]>,
 ) -> Result<()> {
     let file = std::fs::File::create(output_path)?;
     let mut out = BufWriter::new(file);
@@ -43,6 +71,10 @@ fn write_xml_output(
 
     if config.show_dir_list {
         write_matched_dir_list_xml(&mut out, matched_files)?;
+    }
+
+    if let Some(metadata) = metadata {
+        write_file_metadata_xml(&mut out, metadata)?;
     }
 
     writeln!(out, "  <fileContents count=\"{}\">", matched_files.len())?;
@@ -153,11 +185,42 @@ fn write_matched_dir_list_xml(out: &mut dyn Write, matched_files: &[PathBuf]) ->
     Ok(())
 }
 
+fn write_file_metadata_xml(out: &mut dyn Write, metadata: &[FileMetadata]) -> Result<()> {
+    writeln!(out, "  <fileMetadata count=\"{}\">", metadata.len())?;
+
+    if metadata.is_empty() {
+        writeln!(out, "    <message>No files matched the criteria.</message>")?;
+        writeln!(out, "  </fileMetadata>")?;
+        return Ok(());
+    }
+
+    for entry in metadata {
+        let path = entry.path.to_string_lossy().to_string();
+        let binary_attr = if entry.is_binary { "true" } else { "false" };
+
+        writeln!(out, "    <file binary=\"{binary_attr}\">")?;
+        writeln!(out, "      <path>{}</path>", xml_escape_text(&path))?;
+
+        if let Some(error) = &entry.read_error {
+            writeln!(out, "      <error>{}</error>", xml_escape_text(error))?;
+        } else {
+            writeln!(out, "      <lines>{}</lines>", entry.lines)?;
+            writeln!(out, "      <characters>{}</characters>", entry.characters)?;
+        }
+
+        writeln!(out, "    </file>")?;
+    }
+
+    writeln!(out, "  </fileMetadata>")?;
+    Ok(())
+}
+
 fn write_text_output(
     config: &RunConfig,
     output_path: &Path,
     matched_files: &[PathBuf],
     tree: Option<&str>,
+    metadata: Option<&[FileMetadata]>,
 ) -> Result<()> {
     let file = std::fs::File::create(output_path)?;
     let mut out = BufWriter::new(file);
@@ -179,6 +242,10 @@ fn write_text_output(
             "================================================================================"
         )?;
         writeln!(out)?;
+    }
+
+    if let Some(metadata) = metadata {
+        write_file_metadata_text(&mut out, metadata)?;
     }
 
     writeln!(
@@ -258,8 +325,125 @@ fn write_text_output(
     Ok(())
 }
 
+fn write_file_metadata_text(out: &mut dyn Write, metadata: &[FileMetadata]) -> Result<()> {
+    writeln!(
+        out,
+        "--------------------------------------------------------------------------------"
+    )?;
+    writeln!(out, "# File Metadata ({} files)", metadata.len())?;
+    writeln!(
+        out,
+        "********************************************************************************"
+    )?;
+
+    if metadata.is_empty() {
+        writeln!(out, "No files matched the criteria.")?;
+        writeln!(
+            out,
+            "================================================================================"
+        )?;
+        writeln!(out)?;
+        return Ok(());
+    }
+
+    for (index, entry) in metadata.iter().enumerate() {
+        let path = entry.path.to_string_lossy();
+        let binary_marker = if entry.is_binary { " [binary]" } else { "" };
+
+        if let Some(error) = &entry.read_error {
+            writeln!(
+                out,
+                "{}: {}{binary_marker} (error: {})",
+                index + 1,
+                path,
+                error
+            )?;
+            continue;
+        }
+
+        writeln!(
+            out,
+            "{}: {}{binary_marker} (lines: {}, chars: {})",
+            index + 1,
+            path,
+            entry.lines,
+            entry.characters
+        )?;
+    }
+
+    writeln!(
+        out,
+        "================================================================================"
+    )?;
+    writeln!(out)?;
+    Ok(())
+}
+
 fn canonical_or_fallback(path: &Path) -> PathBuf {
     std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
+}
+
+fn collect_file_metadata(matched_files: &[PathBuf]) -> Vec<FileMetadata> {
+    matched_files
+        .iter()
+        .map(|path| build_file_metadata(path))
+        .collect()
+}
+
+fn build_file_metadata(path: &Path) -> FileMetadata {
+    let absolute_path = canonical_or_fallback(path);
+    let bytes = std::fs::read(path);
+
+    match bytes {
+        Ok(bytes) => {
+            let is_text = text_detect::bytes_are_probably_text(&bytes);
+
+            if is_text {
+                let text = String::from_utf8_lossy(&bytes);
+                let lines = text.lines().count();
+                let characters = text.chars().count();
+
+                FileMetadata {
+                    path: absolute_path,
+                    lines,
+                    characters,
+                    is_binary: false,
+                    read_error: None,
+                }
+            } else {
+                let lines = count_lines_in_bytes(&bytes);
+
+                FileMetadata {
+                    path: absolute_path,
+                    lines,
+                    characters: bytes.len(),
+                    is_binary: true,
+                    read_error: None,
+                }
+            }
+        }
+        Err(err) => FileMetadata {
+            path: absolute_path,
+            lines: 0,
+            characters: 0,
+            is_binary: false,
+            read_error: Some(err.to_string()),
+        },
+    }
+}
+
+fn count_lines_in_bytes(bytes: &[u8]) -> usize {
+    if bytes.is_empty() {
+        return 0;
+    }
+
+    let newline_count = bytes.iter().filter(|&&byte| byte == b'\n').count();
+
+    if bytes.ends_with(b"\n") {
+        newline_count
+    } else {
+        newline_count + 1
+    }
 }
 
 fn xml_escape_text(input: &str) -> String {
