@@ -70,6 +70,7 @@ fn metadata_xml_is_included_by_default() -> anyhow::Result<()> {
     let src = dir.path().join("src");
     fs::create_dir_all(&src)?;
     fs::write(src.join("a.txt"), "a\nb\n")?;
+    fs::write(src.join("b.txt"), "one\n")?;
 
     let expected = dir.path().join("_concat-src.xml");
 
@@ -78,7 +79,7 @@ fn metadata_xml_is_included_by_default() -> anyhow::Result<()> {
 
     let out = fs::read_to_string(&expected)?;
 
-    assert!(out.contains("<fileMetadata count=\"1\">"));
+    assert!(out.contains("<fileMetadata count=\"2\">"));
     assert!(out.contains("<lines>2</lines>"));
     assert!(out.contains("<characters>4</characters>"));
     Ok(())
@@ -90,6 +91,7 @@ fn metadata_text_output_is_included_by_default() -> anyhow::Result<()> {
     let src = dir.path().join("src");
     fs::create_dir_all(&src)?;
     fs::write(src.join("a.txt"), "hello")?;
+    fs::write(src.join("b.txt"), "hi")?;
 
     let expected = dir.path().join("_concat-src.txt");
 
@@ -101,7 +103,7 @@ fn metadata_text_output_is_included_by_default() -> anyhow::Result<()> {
 
     let out = fs::read_to_string(&expected)?;
 
-    assert!(out.contains("# File Metadata (1 files)"));
+    assert!(out.contains("# File Metadata (2 files)"));
     assert!(out.contains("(lines: 1, chars: 5)"));
     Ok(())
 }
@@ -124,6 +126,70 @@ fn metadata_can_be_disabled() -> anyhow::Result<()> {
     let out = fs::read_to_string(&expected)?;
 
     assert!(!out.contains("<fileMetadata"));
+    Ok(())
+}
+
+#[test]
+fn metadata_can_sort_by_characters() -> anyhow::Result<()> {
+    let dir = non_hidden_tempdir()?;
+    let src = dir.path().join("src");
+    fs::create_dir_all(&src)?;
+    fs::write(src.join("a.txt"), "aaa\n")?;
+    fs::write(src.join("b.txt"), "b\n")?;
+
+    let expected = dir.path().join("_concat-src.txt");
+
+    let mut cmd = cargo_bin_cmd!("concat");
+    cmd.current_dir(dir.path())
+        .args(["-t", "--metadata-sort", "characters", "src"])
+        .assert()
+        .success();
+
+    let out = fs::read_to_string(&expected)?;
+
+    let first_line = out
+        .lines()
+        .skip_while(|line| !line.starts_with('#'))
+        .skip(2) // skip the section header and separator line after header
+        .next()
+        .unwrap_or("");
+
+    assert!(
+        first_line.contains("a.txt"),
+        "Expected a.txt (more chars) to appear first in metadata when sorted by characters"
+    );
+
+    Ok(())
+}
+
+#[test]
+fn metadata_can_use_natural_order() -> anyhow::Result<()> {
+    let dir = non_hidden_tempdir()?;
+    let src = dir.path().join("src");
+    fs::create_dir_all(&src)?;
+    fs::write(src.join("a.txt"), "aaa\n")?;
+    fs::write(src.join("b.txt"), "b\n")?;
+
+    let expected = dir.path().join("_concat-src.xml");
+
+    let mut cmd = cargo_bin_cmd!("concat");
+    cmd.current_dir(dir.path())
+        .args(["--metadata-sort", "natural", "src"])
+        .assert()
+        .success();
+
+    let out = fs::read_to_string(&expected)?;
+
+    let first_path_line = out
+        .lines()
+        .find(|line| line.trim_start().starts_with("<path>"))
+        .unwrap_or_default();
+
+    assert!(
+        first_path_line.contains("a.txt"),
+        "Expected natural order to keep default path ordering (a.txt first)"
+    );
+
     Ok(())
 }
 

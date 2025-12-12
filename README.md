@@ -62,6 +62,7 @@ If no inputs are provided, `concat` defaults to `.`.
 - `-C, --no-clean-concat`: do not delete existing `_concat-*` files in the current directory before writing
 - `-b, --include-binary`: include non-text files (encoded as base64)
 - `-M, --no-metadata`: omit the per-file metadata header (line/character counts)
+- `--metadata-sort <mode>`: order metadata by `lines` (default), `characters`, or `natural` (original matched order)
 - `-l, --no-dir-list`: omit the matched directory list section (XML only)
 - `-v, --verbose`: verbose logging
 - `-d, --debug`: extra debug logging

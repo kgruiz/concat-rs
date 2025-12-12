@@ -1,3 +1,4 @@
+use clap::ValueEnum;
 use clap::{Args, Parser, Subcommand};
 
 #[derive(Parser, Debug)]
@@ -65,11 +66,27 @@ pub struct RunArgs {
     #[arg(short = 'M', long = "no-metadata")]
     pub no_metadata: bool,
 
+    #[arg(long = "metadata-sort", value_enum, default_value_t = MetadataSort::Lines)]
+    pub metadata_sort: MetadataSort,
+
     #[arg(short = 'C', long = "no-clean-concat")]
     pub no_clean_concat: bool,
 
     #[arg(value_name = "FILE|DIR|GLOB", num_args = 0..)]
     pub inputs: Vec<String>,
+}
+
+#[derive(Copy, Clone, Debug, Eq, PartialEq, ValueEnum)]
+pub enum MetadataSort {
+    Lines,
+    Characters,
+    Natural,
+}
+
+impl Default for MetadataSort {
+    fn default() -> Self {
+        Self::Lines
+    }
 }
 
 #[derive(Args, Debug, Default)]

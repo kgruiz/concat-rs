@@ -5,6 +5,7 @@ use std::path::{Path, PathBuf};
 use anyhow::Result;
 use base64::Engine as _;
 
+use crate::cli::MetadataSort;
 use crate::config::{OutputFormat, RunConfig};
 use crate::sort;
 use crate::text_detect;
@@ -25,7 +26,7 @@ pub fn write_output(
     tree: Option<&str>,
 ) -> Result<()> {
     let metadata = if config.show_metadata {
-        Some(collect_file_metadata(matched_files))
+        Some(collect_file_metadata(matched_files, config.metadata_sort))
     } else {
         None
     };
@@ -383,11 +384,27 @@ fn canonical_or_fallback(path: &Path) -> PathBuf {
     std::fs::canonicalize(path).unwrap_or_else(|_| path.to_path_buf())
 }
 
-fn collect_file_metadata(matched_files: &[PathBuf]) -> Vec<FileMetadata> {
-    matched_files
+fn collect_file_metadata(matched_files: &[PathBuf], sort_by: MetadataSort) -> Vec<FileMetadata> {
+    let mut metadata: Vec<FileMetadata> = matched_files
         .iter()
         .map(|path| build_file_metadata(path))
-        .collect()
+        .collect();
+
+    match sort_by {
+        MetadataSort::Lines => {
+            metadata.sort_by(|a, b| b.lines.cmp(&a.lines).then_with(|| a.path.cmp(&b.path)));
+        }
+        MetadataSort::Characters => {
+            metadata.sort_by(|a, b| {
+                b.characters
+                    .cmp(&a.characters)
+                    .then_with(|| a.path.cmp(&b.path))
+            });
+        }
+        MetadataSort::Natural => {}
+    }
+
+    metadata
 }
 
 fn build_file_metadata(path: &Path) -> FileMetadata {
