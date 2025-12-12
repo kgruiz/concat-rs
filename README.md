@@ -6,8 +6,22 @@ Rust CLI implementation of `concat` from `concat-zsh`.
 
 ## Install
 
+Preferred (uses the repo `install` script with conflict warnings):
+
 ```sh
-cargo install --path .
+./install
+```
+
+Bypass prompts (for CI/non-interactive use):
+
+```sh
+./install --force
+```
+
+Or install directly with Cargo:
+
+```sh
+cargo install --path . --locked --force
 ```
 
 Or build a release binary:
@@ -15,6 +29,10 @@ Or build a release binary:
 ```sh
 cargo build --release
 ```
+
+## Notes
+
+- If you still have `concat-zsh` sourced as a Zsh function named `concat`, it will shadow the Rust binary. Use `command concat ...` or remove the function from your shell config.
 
 ## Usage
 
