@@ -1,3 +1,4 @@
+mod clean;
 mod cleanup;
 mod cli;
 mod config;
@@ -20,10 +21,7 @@ fn main() -> Result<()> {
     let cli = cli::Cli::parse_from(&raw_args);
 
     match cli.command {
-        Some(cli::Command::Clean(_clean)) => {
-            eprintln!("clean: not implemented yet");
-            Ok(())
-        }
+        Some(cli::Command::Clean(clean_args)) => clean::run(clean_args),
         None => {
             let had_user_args = raw_args.len() > 1;
             let config = config::RunConfig::from_cli(cli, had_user_args)?;
