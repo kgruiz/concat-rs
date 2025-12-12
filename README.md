@@ -1,6 +1,6 @@
 # concat-rs
 
-Rust CLI implementation of `concat` from `concat-zsh`.
+> Rust CLI implementation of `concat` from [`concat-zsh`](https://github.com/kgruiz/concat-zsh).
 
 `concat` merges the contents of multiple files (and/or directories) into a single output file, for use as context in LLM prompts or general file aggregation.
 
