@@ -18,12 +18,6 @@ Bypass prompts (for CI/non-interactive use):
 ./install --force
 ```
 
-Or install directly with Cargo:
-
-```sh
-cargo install --path . --locked --force
-```
-
 Or build a release binary:
 
 ```sh
