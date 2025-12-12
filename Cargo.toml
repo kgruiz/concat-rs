@@ -1,0 +1,11 @@
+[package]
+name = "concat-rs"
+version = "0.1.0"
+edition = "2024"
+license = "GPL-3.0-only"
+
+[dependencies]
+
+[[bin]]
+name = "concat"
+path = "src/main.rs"
