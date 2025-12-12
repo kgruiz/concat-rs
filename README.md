@@ -35,7 +35,7 @@ If no inputs are provided, `concat` defaults to `.`.
 
 - Default output format is **XML**.
 - Use `-t, --text` for plain text output.
-- Output filenames default to `_concat-*` unless `-o, --output` is provided.
+- Output filenames default to `_concat-*` unless `-o, --output` is provided. Use `-y, --clipboard` to copy the output to your clipboard instead of writing a file.
 - A metadata header (line and character counts per file) is included by default; disable with `-M, --no-metadata`.
 
 ### Output filename logic (when `--output` is not set)
@@ -49,6 +49,7 @@ If no inputs are provided, `concat` defaults to `.`.
 ## Options (main command)
 
 - `-o, --output <file>`: output file name
+- `-y, --clipboard`: copy the generated output to the system clipboard instead of writing a file
 - `-r, --recursive`: search directories recursively (default)
 - `-n, --no-recursive`: do not recurse
 - `-t, --text`: plain text output (default XML)

@@ -25,6 +25,34 @@ pub fn write_output(
     matched_files: &[PathBuf],
     tree: Option<&str>,
 ) -> Result<()> {
+    let file = std::fs::File::create(output_path)?;
+    let mut out = BufWriter::new(file);
+    write_output_to_writer(config, matched_files, tree, &mut out)?;
+    out.flush()?;
+    Ok(())
+}
+
+pub fn render_output(
+    config: &RunConfig,
+    matched_files: &[PathBuf],
+    tree: Option<&str>,
+) -> Result<String> {
+    let mut buffer = Vec::new();
+    {
+        let mut out = BufWriter::new(&mut buffer);
+        write_output_to_writer(config, matched_files, tree, &mut out)?;
+        out.flush()?;
+    }
+
+    Ok(String::from_utf8_lossy(&buffer).into_owned())
+}
+
+fn write_output_to_writer(
+    config: &RunConfig,
+    matched_files: &[PathBuf],
+    tree: Option<&str>,
+    out: &mut dyn Write,
+) -> Result<()> {
     let metadata = if config.show_metadata {
         Some(collect_file_metadata(matched_files, config.metadata_sort))
     } else {
@@ -32,50 +60,39 @@ pub fn write_output(
     };
 
     match config.format {
-        OutputFormat::Xml => write_xml_output(
-            config,
-            output_path,
-            matched_files,
-            tree,
-            metadata.as_deref(),
-        ),
-        OutputFormat::Text => write_text_output(
-            config,
-            output_path,
-            matched_files,
-            tree,
-            metadata.as_deref(),
-        ),
+        OutputFormat::Xml => {
+            write_xml_output(config, matched_files, tree, metadata.as_deref(), out)
+        }
+        OutputFormat::Text => {
+            write_text_output(config, matched_files, tree, metadata.as_deref(), out)
+        }
     }
 }
 
 fn write_xml_output(
     config: &RunConfig,
-    output_path: &Path,
     matched_files: &[PathBuf],
     tree: Option<&str>,
     metadata: Option<&[FileMetadata]>,
+    out: &mut dyn Write,
 ) -> Result<()> {
-    let file = std::fs::File::create(output_path)?;
-    let mut out = BufWriter::new(file);
-
     writeln!(out, "<?xml version=\"1.0\" encoding=\"UTF-8\"?>")?;
     writeln!(out, "<concatenation>")?;
 
     if let Some(tree) = tree {
         writeln!(out, "  <directoryTree context=\".\">")?;
         writeln!(out, "    <representation><![CDATA[")?;
-        write_cdata_body(&mut out, tree)?;
+        write_cdata_body(out, tree)?;
         writeln!(out, "]]></representation>")?;
         writeln!(out, "  </directoryTree>")?;
     }
 
     if config.show_dir_list {
-        write_matched_dir_list_xml(&mut out, matched_files)?;
+        write_matched_dir_list_xml(out, matched_files)?;
     }
 
     if let Some(metadata) = metadata {
-        write_file_metadata_xml(&mut out, metadata)?;
+        write_file_metadata_xml(out, metadata)?;
     }
 
     writeln!(out, "  <fileContents count=\"{}\">", matched_files.len())?;
@@ -118,7 +135,7 @@ fn write_xml_output(
                 writeln!(out, "      <content><![CDATA[")?;
             }
 
-            write_cdata_body(&mut out, &content)?;
+            write_cdata_body(out, &content)?;
             writeln!(out, "]]></content>")?;
             writeln!(out, "    </file>")?;
         }
@@ -218,14 +235,11 @@ fn write_file_metadata_xml(out: &mut dyn Write, metadata: &[FileMetadata]) -> Re
 
 fn write_text_output(
     config: &RunConfig,
-    output_path: &Path,
     matched_files: &[PathBuf],
     tree: Option<&str>,
     metadata: Option<&[FileMetadata]>,
+    out: &mut dyn Write,
 ) -> Result<()> {
-    let file = std::fs::File::create(output_path)?;
-    let mut out = BufWriter::new(file);
-
     if let Some(tree) = tree {
         writeln!(
             out,
@@ -246,7 +260,7 @@ fn write_text_output(
     }
 
     if let Some(metadata) = metadata {
-        write_file_metadata_text(&mut out, metadata)?;
+        write_file_metadata_text(out, metadata)?;
     }
 
     writeln!(

@@ -21,6 +21,9 @@ pub struct RunArgs {
     #[arg(short = 'o', long = "output")]
     pub output: Option<std::path::PathBuf>,
 
+    #[arg(short = 'y', long = "clipboard")]
+    pub clipboard: bool,
+
     #[arg(short = 'r', long = "recursive")]
     pub recursive: bool,
 

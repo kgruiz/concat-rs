@@ -1,6 +1,7 @@
 mod clean;
 mod cleanup;
 mod cli;
+mod clipboard;
 mod config;
 mod discover;
 mod filter;

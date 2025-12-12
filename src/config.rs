@@ -12,6 +12,7 @@ pub enum OutputFormat {
 #[derive(Debug)]
 pub struct RunConfig {
     pub output: Option<std::path::PathBuf>,
+    pub copy_to_clipboard: bool,
     pub recursive: bool,
     pub format: OutputFormat,
     pub exts: Vec<String>,
@@ -57,6 +58,7 @@ impl RunConfig {
 
         Ok(Self {
             output: cli.run.output,
+            copy_to_clipboard: cli.run.clipboard,
             recursive,
             format,
             exts,
@@ -92,6 +94,7 @@ impl RunConfig {
             None => eprintln!("Output File (requested): <auto>"),
         }
 
+        eprintln!("Copy To Clipboard: {}", self.copy_to_clipboard);
         eprintln!("Format: {}", self.format.as_str());
         eprintln!("Recursive: {}", self.recursive);
         eprintln!("Include Hidden: {}", self.include_hidden);
