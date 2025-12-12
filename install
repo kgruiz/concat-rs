@@ -1,0 +1,121 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
+if ! command -v cargo >/dev/null 2>&1; then
+  echo "error: cargo is required but was not found in PATH." >&2
+  echo "Install Rust via https://rustup.rs/ and ensure cargo is available." >&2
+  exit 1
+fi
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+BIN_NAME="concat"
+CARGO_HOME_DIR="${CARGO_HOME:-$HOME/.cargo}"
+BIN_DIR="$CARGO_HOME_DIR/bin"
+TARGET_PATH="$BIN_DIR/$BIN_NAME"
+
+FORCE=false
+CARGO_ARGS=()
+
+usage() {
+  cat <<'EOUSAGE'
+Usage: ./install [FLAGS] [cargo install flags]
+
+Flags:
+  -y, --yes, --force       bypass conflict prompts and proceed
+  -q, --quiet              suppress prompts (implies --force)
+  -h, --help               display this help message
+
+All other arguments are forwarded to "cargo install".
+EOUSAGE
+}
+
+warn() {
+  printf 'warning: %s\n' "$*" >&2
+}
+
+die() {
+  printf 'error: %s\n' "$*" >&2
+  exit 1
+}
+
+prompt_yes() {
+  local prompt="$1"
+
+  if $FORCE || [ ! -t 0 ]; then
+    return 0
+  fi
+
+  printf '%s' "$prompt"
+  read -r response
+  case "$response" in
+    [yY]|[yY][eE][sS]) return 0 ;;
+    *) return 1 ;;
+  esac
+}
+
+while (($#)); do
+  case "$1" in
+    -q|--quiet)
+      FORCE=true
+      ;;
+    -y|--yes|--force)
+      FORCE=true
+      ;;
+    -h|--help)
+      usage
+      exit 0
+      ;;
+    --)
+      shift
+      CARGO_ARGS+=("$@")
+      break
+      ;;
+    *)
+      CARGO_ARGS+=("$1")
+      ;;
+  esac
+  shift
+done
+
+# Detect a legacy Zsh function named "concat" that would shadow the binary.
+if command -v zsh >/dev/null 2>&1; then
+  LEGACY_OUT="$(zsh -lc 'whence -w concat' 2>/dev/null || true)"
+  if printf '%s' "$LEGACY_OUT" | grep -q "function"; then
+    warn "found existing Zsh function 'concat' in your shell environment."
+    warn "It will shadow the Rust binary. Remove it from your shell config, or use 'command concat ...' to bypass."
+    if ! $FORCE && ! prompt_yes "Proceed anyway? [y/N]: "; then
+      die "aborting to avoid conflict with existing 'concat' function. Re-run with --force to install anyway."
+    fi
+  fi
+fi
+
+EXISTING_BIN="$(command -v "$BIN_NAME" 2>/dev/null || true)"
+if [ -n "$EXISTING_BIN" ] && [ "$EXISTING_BIN" != "$TARGET_PATH" ]; then
+  warn "'$BIN_NAME' already resolves to $EXISTING_BIN (expected $TARGET_PATH after install)."
+  warn "This is usually due to another 'concat' earlier on PATH, or a shell function/alias."
+  if ! $FORCE && ! prompt_yes "Proceed and install anyway? [y/N]: "; then
+    die "aborting to avoid clobbering/confusion. Re-run with --force to install anyway."
+  fi
+fi
+
+printf 'Installing %s from %s\n' "$BIN_NAME" "$SCRIPT_DIR"
+printf 'Target binary: %s\n' "$TARGET_PATH"
+
+if ((${#CARGO_ARGS[@]})); then
+  cargo install --path "$SCRIPT_DIR" --locked --force "${CARGO_ARGS[@]}"
+else
+  cargo install --path "$SCRIPT_DIR" --locked --force
+fi
+
+RESOLVED_BIN="$(command -v "$BIN_NAME" 2>/dev/null || true)"
+
+if [ -x "$TARGET_PATH" ]; then
+  printf '%s installation complete at %s\n' "$BIN_NAME" "$TARGET_PATH"
+else
+  warn "expected binary not found at $TARGET_PATH; ensure \$CARGO_HOME/bin is on PATH."
+fi
+
+if [ -n "$RESOLVED_BIN" ] && [ "$RESOLVED_BIN" != "$TARGET_PATH" ]; then
+  warn "PATH still resolves '$BIN_NAME' to $RESOLVED_BIN (expected $TARGET_PATH)."
+fi
