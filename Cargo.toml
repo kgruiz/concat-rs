@@ -7,6 +7,9 @@ license = "GPL-3.0-only"
 [dependencies]
 anyhow = "1.0.95"
 clap = { version = "4.5.23", features = ["derive"] }
+glob = "0.3.2"
+globset = "0.4.16"
+walkdir = "2.5.0"
 
 [[bin]]
 name = "concat"

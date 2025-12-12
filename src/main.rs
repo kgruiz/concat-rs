@@ -1,5 +1,11 @@
 mod cli;
 mod config;
+mod discover;
+mod filter;
+mod inputs;
+mod run;
+mod sort;
+mod text_detect;
 
 use anyhow::Result;
 use clap::Parser;
@@ -18,8 +24,8 @@ fn main() -> Result<()> {
             let had_user_args = raw_args.len() > 1;
             let config = config::RunConfig::from_cli(cli, had_user_args)?;
             config.print_summary();
-            eprintln!("run: not implemented yet");
-            Ok(())
+
+            run::run(config)
         }
     }
 }
