@@ -18,3 +18,7 @@ pub fn is_probably_text(path: &Path) -> Result<bool> {
 
     Ok(!buf[..bytes_read].contains(&0))
 }
+
+pub fn bytes_are_probably_text(bytes: &[u8]) -> bool {
+    !bytes.is_empty() && !bytes.contains(&0)
+}

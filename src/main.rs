@@ -1,11 +1,15 @@
+mod cleanup;
 mod cli;
 mod config;
 mod discover;
 mod filter;
 mod inputs;
+mod output;
+mod output_name;
 mod run;
 mod sort;
 mod text_detect;
+mod tree;
 
 use anyhow::Result;
 use clap::Parser;
