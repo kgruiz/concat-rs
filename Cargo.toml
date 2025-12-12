@@ -5,6 +5,8 @@ edition = "2024"
 license = "GPL-3.0-only"
 
 [dependencies]
+anyhow = "1.0.95"
+clap = { version = "4.5.23", features = ["derive"] }
 
 [[bin]]
 name = "concat"
